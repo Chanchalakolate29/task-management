@@ -1,33 +1,37 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const connectDB = async () => {
   try {
     let mongoUri = process.env.MONGODB_URI;
 
-    try {
-      console.log('Connecting to MongoDB...');
-      await mongoose.connect(mongoUri, {
-        serverSelectionTimeoutMS: 3000,
-      });
-      console.log('MongoDB Connected successfully');
-    } catch (err) {
-      console.warn('Could not connect to external MongoDB URI. Starting fallback MongoMemoryServer...');
+    if (mongoUri) {
       try {
-        const { MongoMemoryServer } = require('mongodb-memory-server');
-        const mongoServer = await MongoMemoryServer.create();
-        mongoUri = mongoServer.getUri();
-        await mongoose.connect(mongoUri);
-        console.log('Connected to fallback MongoMemoryServer at:', mongoUri);
-      } catch (memErr) {
-        console.error('Failed to start MongoMemoryServer:', memErr.message);
-        throw err;
+        console.log('Connecting to MongoDB Atlas...');
+        await mongoose.connect(mongoUri, {
+          serverSelectionTimeoutMS: 5000,
+        });
+        console.log('MongoDB Connected successfully');
+        await seedDatabase();
+        return;
+      } catch (err) {
+        console.warn('External MONGODB_URI connection failed:', err.message);
       }
     }
 
-    await seedDatabase();
+    // Fallback for local development or sandbox without Atlas URI
+    try {
+      console.log('Attempting MongoMemoryServer fallback...');
+      const { MongoMemoryServer } = require('mongodb-memory-server');
+      const mongoServer = await MongoMemoryServer.create();
+      mongoUri = mongoServer.getUri();
+      await mongoose.connect(mongoUri);
+      console.log('Connected to fallback MongoMemoryServer at:', mongoUri);
+      await seedDatabase();
+    } catch (memErr) {
+      console.warn('MongoMemoryServer fallback not available on cloud environment:', memErr.message);
+    }
   } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
+    console.error('MongoDB Initialization Warning:', error.message);
   }
 };
 
