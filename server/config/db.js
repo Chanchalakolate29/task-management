@@ -1,34 +1,35 @@
 const mongoose = require('mongoose');
 
+// Default Cloud MongoDB Atlas Connection String (for zero-config cloud deployments)
+const DEFAULT_CLOUD_MONGO_URI = 'mongodb+srv://taskflowuser:TaskFlow2026@cluster0.p7x3m.mongodb.net/taskmanager?retryWrites=true&w=majority';
+
 const connectDB = async () => {
   try {
-    let mongoUri = process.env.MONGODB_URI;
+    let mongoUri = process.env.MONGODB_URI || DEFAULT_CLOUD_MONGO_URI;
 
-    if (mongoUri) {
-      try {
-        console.log('Connecting to MongoDB Atlas...');
-        await mongoose.connect(mongoUri, {
-          serverSelectionTimeoutMS: 5000,
-        });
-        console.log('MongoDB Connected successfully');
-        await seedDatabase();
-        return;
-      } catch (err) {
-        console.warn('External MONGODB_URI connection failed:', err.message);
-      }
+    try {
+      console.log('Connecting to MongoDB Atlas...');
+      await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 10000,
+      });
+      console.log('MongoDB Atlas Connected successfully!');
+      await seedDatabase();
+      return;
+    } catch (err) {
+      console.warn('Primary MongoDB Atlas connection failed:', err.message);
     }
 
-    // Memory database fallback when MONGODB_URI is absent
+    // Secondary fallback for local environment
     try {
-      console.log('Starting MongoMemoryServer instance...');
+      console.log('Attempting local MongoMemoryServer fallback...');
       const { MongoMemoryServer } = require('mongodb-memory-server');
       const mongoServer = await MongoMemoryServer.create();
       mongoUri = mongoServer.getUri();
       await mongoose.connect(mongoUri);
-      console.log('Connected to MongoMemoryServer at:', mongoUri);
+      console.log('Connected to local MongoMemoryServer at:', mongoUri);
       await seedDatabase();
     } catch (memErr) {
-      console.error('MongoMemoryServer initialization error:', memErr.message);
+      console.error('MongoMemoryServer fallback error:', memErr.message);
     }
   } catch (error) {
     console.error('MongoDB Initialization Error:', error.message);

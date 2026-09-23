@@ -10,3 +10,5 @@ services:
         value: production
       - key: JWT_SECRET
         value: supersecret_jwt_key_task_manager_2026_spec
+      - key: MONGODB_URI
+        value: mongodb+srv://taskflowuser:TaskFlow2026@cluster0.p7x3m.mongodb.net/taskmanager?retryWrites=true&w=majority
