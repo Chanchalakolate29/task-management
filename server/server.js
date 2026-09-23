@@ -13,11 +13,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Connect Database (if not in test mode)
-if (process.env.NODE_ENV !== 'test') {
-  connectDB();
-}
-
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
@@ -54,10 +49,21 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  });
-}
+// Start server after MongoDB connection is fully established
+const startServer = async () => {
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      await connectDB();
+    } catch (err) {
+      console.error('Database connection error during startup:', err.message);
+    }
+
+    app.listen(PORT, () => {
+      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    });
+  }
+};
+
+startServer();
 
 module.exports = app;
