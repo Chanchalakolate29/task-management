@@ -1,7 +1,14 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
+const connectDB = require('../config/db');
 
-// Helper to generate JWT Token
+const ensureDBConnected = async () => {
+  if (mongoose.connection.readyState !== 1) {
+    await connectDB();
+  }
+};
+
 const generateToken = (id, rememberMe = false) => {
   return jwt.sign(
     { id },
@@ -12,18 +19,16 @@ const generateToken = (id, rememberMe = false) => {
   );
 };
 
-// @desc    Register a new user
-// @route   POST /register or POST /api/auth/register
-// @access  Public
 const registerUser = async (req, res) => {
   try {
+    await ensureDBConnected();
+
     const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide all required fields (name, email, password)' });
     }
 
-    // Check email validation
     const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ success: false, message: 'Invalid email address format' });
@@ -33,13 +38,11 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
     }
 
-    // Check duplicate user
     const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
       return res.status(400).json({ success: false, message: 'User with this email already exists' });
     }
 
-    // Create user (password is hashed in pre-save hook)
     const user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -70,25 +73,22 @@ const registerUser = async (req, res) => {
   }
 };
 
-// @desc    Authenticate user & get token
-// @route   POST /login or POST /api/auth/login
-// @access  Public
 const loginUser = async (req, res) => {
   try {
+    await ensureDBConnected();
+
     const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide both email and password' });
     }
 
-    // Check for user
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials: User not found' });
     }
 
-    // Check password
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
@@ -114,11 +114,9 @@ const loginUser = async (req, res) => {
   }
 };
 
-// @desc    Get current user profile
-// @route   GET /me or GET /api/auth/me
-// @access  Private
 const getMe = async (req, res) => {
   try {
+    await ensureDBConnected();
     const user = await User.findById(req.user._id).select('-password');
     res.json({
       success: true,

@@ -1,38 +1,46 @@
 const mongoose = require('mongoose');
 
-// Default Cloud MongoDB Atlas Connection String (for zero-config cloud deployments)
-const DEFAULT_CLOUD_MONGO_URI = 'mongodb+srv://taskflowuser:TaskFlow2026@cluster0.p7x3m.mongodb.net/taskmanager?retryWrites=true&w=majority';
+// Disable Mongoose command buffering to prevent 10,000ms timeouts on uninitialized connections
+mongoose.set('bufferCommands', false);
 
 const connectDB = async () => {
-  try {
-    let mongoUri = process.env.MONGODB_URI || DEFAULT_CLOUD_MONGO_URI;
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
 
+  const mongoUri = process.env.MONGODB_URI;
+
+  if (mongoUri) {
     try {
       console.log('Connecting to MongoDB Atlas...');
       await mongoose.connect(mongoUri, {
-        serverSelectionTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 5000,
       });
       console.log('MongoDB Atlas Connected successfully!');
       await seedDatabase();
       return;
     } catch (err) {
-      console.warn('Primary MongoDB Atlas connection failed:', err.message);
+      console.warn('MongoDB Atlas connection warning:', err.message);
     }
+  }
 
-    // Secondary fallback for local environment
-    try {
-      console.log('Attempting local MongoMemoryServer fallback...');
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      const mongoServer = await MongoMemoryServer.create();
-      mongoUri = mongoServer.getUri();
-      await mongoose.connect(mongoUri);
-      console.log('Connected to local MongoMemoryServer at:', mongoUri);
-      await seedDatabase();
-    } catch (memErr) {
-      console.error('MongoMemoryServer fallback error:', memErr.message);
-    }
-  } catch (error) {
-    console.error('MongoDB Initialization Error:', error.message);
+  // Local / Standalone fallback
+  try {
+    console.log('Attempting MongoMemoryServer fallback...');
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongoServer = await MongoMemoryServer.create({
+      instance: {
+        dbName: 'taskmanager',
+      },
+    });
+    const memoryUri = mongoServer.getUri();
+    await mongoose.connect(memoryUri, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    console.log('Connected to MongoMemoryServer fallback at:', memoryUri);
+    await seedDatabase();
+  } catch (memErr) {
+    console.warn('MongoMemoryServer fallback skipped:', memErr.message);
   }
 };
 

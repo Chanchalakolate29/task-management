@@ -1,25 +1,29 @@
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
+const connectDB = require('../config/db');
 
-// @desc    Retrieve all tasks with filters, search, sort, and pagination
-// @route   GET /tasks or GET /api/tasks
-// @access  Private
+const ensureDBConnected = async () => {
+  if (mongoose.connection.readyState !== 1) {
+    await connectDB();
+  }
+};
+
 const getTasks = async (req, res) => {
   try {
+    await ensureDBConnected();
+
     const { status, priority, search, sortBy, order, page = 1, limit = 50 } = req.query;
 
     const query = {};
 
-    // Filter by status
     if (status && status !== 'All') {
       query.status = status;
     }
 
-    // Filter by priority
     if (priority && priority !== 'All') {
       query.priority = priority;
     }
 
-    // Search by title or description
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -27,13 +31,12 @@ const getTasks = async (req, res) => {
       ];
     }
 
-    // Sort options
     let sortOptions = {};
     if (sortBy) {
       const sortOrder = order === 'desc' ? -1 : 1;
       sortOptions[sortBy] = sortOrder;
     } else {
-      sortOptions.createdAt = -1; // Default newest first
+      sortOptions.createdAt = -1;
     }
 
     const pageNum = parseInt(page, 10);
@@ -48,7 +51,6 @@ const getTasks = async (req, res) => {
       .skip(skip)
       .limit(limitNum);
 
-    // Calculate metrics count for dashboard metrics
     const allTasksCount = await Task.countDocuments();
     const pendingCount = await Task.countDocuments({ status: 'Pending' });
     const inProgressCount = await Task.countDocuments({ status: 'In Progress' });
@@ -78,11 +80,9 @@ const getTasks = async (req, res) => {
   }
 };
 
-// @desc    Retrieve a single task by ID
-// @route   GET /tasks/:id or GET /api/tasks/:id
-// @access  Private
 const getTaskById = async (req, res) => {
   try {
+    await ensureDBConnected();
     const task = await Task.findById(req.params.id)
       .populate('assignedTo', 'name email avatar role')
       .populate('createdBy', 'name email avatar role');
@@ -104,11 +104,9 @@ const getTaskById = async (req, res) => {
   }
 };
 
-// @desc    Create a new task
-// @route   POST /tasks or POST /api/tasks
-// @access  Private
 const createTask = async (req, res) => {
   try {
+    await ensureDBConnected();
     const { title, description, priority, dueDate, status, assignedTo } = req.body;
 
     if (!title || !dueDate || !assignedTo) {
@@ -142,11 +140,9 @@ const createTask = async (req, res) => {
   }
 };
 
-// @desc    Update an existing task
-// @route   PUT /tasks/:id or PUT /api/tasks/:id
-// @access  Private
 const updateTask = async (req, res) => {
   try {
+    await ensureDBConnected();
     const { title, description, priority, dueDate, status, assignedTo } = req.body;
 
     let task = await Task.findById(req.params.id);
@@ -155,7 +151,6 @@ const updateTask = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
-    // Update fields if provided
     if (title !== undefined) task.title = title;
     if (description !== undefined) task.description = description;
     if (priority !== undefined) task.priority = priority;
@@ -179,11 +174,9 @@ const updateTask = async (req, res) => {
   }
 };
 
-// @desc    Delete a task
-// @route   DELETE /tasks/:id or DELETE /api/tasks/:id
-// @access  Private
 const deleteTask = async (req, res) => {
   try {
+    await ensureDBConnected();
     const task = await Task.findById(req.params.id);
 
     if (!task) {
