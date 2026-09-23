@@ -1,9 +1,19 @@
 import axios from 'axios';
 
-// Determine base URL dynamically (from VITE_API_URL environment variable or relative path)
+// Live Render production backend fallback URL
+const RENDER_BACKEND_URL = 'https://task-management-srv-dappcgbbc2fs73bivrfg.onrender.com';
+
 const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
+  }
+  // If running in production (e.g. on Vercel), automatically target live Render backend
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return RENDER_BACKEND_URL;
   }
   return '/';
 };

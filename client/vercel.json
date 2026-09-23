@@ -1,5 +1,28 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "https://task-management-srv-dappcgbbc2fs73bivrfg.onrender.com/api/:path*"
+    },
+    {
+      "source": "/register",
+      "destination": "https://task-management-srv-dappcgbbc2fs73bivrfg.onrender.com/register"
+    },
+    {
+      "source": "/login",
+      "destination": "https://task-management-srv-dappcgbbc2fs73bivrfg.onrender.com/login"
+    },
+    {
+      "source": "/tasks/:path*",
+      "destination": "https://task-management-srv-dappcgbbc2fs73bivrfg.onrender.com/tasks/:path*"
+    },
+    {
+      "source": "/users/:path*",
+      "destination": "https://task-management-srv-dappcgbbc2fs73bivrfg.onrender.com/users/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
