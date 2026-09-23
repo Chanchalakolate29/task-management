@@ -18,20 +18,20 @@ const connectDB = async () => {
       }
     }
 
-    // Fallback for local development or sandbox without Atlas URI
+    // Memory database fallback when MONGODB_URI is absent
     try {
-      console.log('Attempting MongoMemoryServer fallback...');
+      console.log('Starting MongoMemoryServer instance...');
       const { MongoMemoryServer } = require('mongodb-memory-server');
       const mongoServer = await MongoMemoryServer.create();
       mongoUri = mongoServer.getUri();
       await mongoose.connect(mongoUri);
-      console.log('Connected to fallback MongoMemoryServer at:', mongoUri);
+      console.log('Connected to MongoMemoryServer at:', mongoUri);
       await seedDatabase();
     } catch (memErr) {
-      console.warn('MongoMemoryServer fallback not available on cloud environment:', memErr.message);
+      console.error('MongoMemoryServer initialization error:', memErr.message);
     }
   } catch (error) {
-    console.error('MongoDB Initialization Warning:', error.message);
+    console.error('MongoDB Initialization Error:', error.message);
   }
 };
 
