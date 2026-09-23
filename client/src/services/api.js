@@ -1,8 +1,15 @@
 import axios from 'axios';
 
-// Base API configuration
+// Determine base URL dynamically (from VITE_API_URL environment variable or relative path)
+const getBaseURL = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return '/';
+};
+
 const API = axios.create({
-  baseURL: '/', // Uses Vite dev proxy or absolute URL in production
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -29,7 +36,6 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 401 Unauthorized handling (Expired/Invalid JWT)
     if (error.response && error.response.status === 401) {
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
         localStorage.removeItem('userInfo');
